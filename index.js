@@ -22,6 +22,8 @@ function arrow(root) {
 
   function render(from, to) {
     dom.attr('d', 'M ' + from.x + ' ' + from.y + ' L ' + to.x + ' ' + to.y);
+
+    return dom;
   }
 
   function stroke(color) {
@@ -35,6 +37,8 @@ function arrow(root) {
     }
 
     dom.attr('marker-end', 'url(#' + strokeDef + ')').attr('stroke', color);
+
+    return dom;
   }
 
   function defineStroke(color) {
@@ -72,4 +76,5 @@ function normalizeColor(color) {
   } else if (color[0] === '#') {
     return color.substr(1);
   }
+  return color;
 }
