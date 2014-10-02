@@ -1,13 +1,11 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var createArrow = require('../');
-var scene = document.getElementById('scene');
+var arrow = createArrow();
 
-var arrow = createArrow(scene);
-arrow.stroke('deepskyblue')
+arrow.attr('stroke', 'deepskyblue')
      .render({x: 0, y: 0}, {x: 42, y: 42});
 
-scene.appendChild(arrow);
-
+arrow.appendTo(document.getElementById('scene'));
 
 },{"../":2}],2:[function(require,module,exports){
 var svg = require('simplesvg');
@@ -16,31 +14,62 @@ module.exports = arrow;
 
 arrow.intersectCircle = require('./lib/intersectCircle.js');
 
-function arrow(root) {
+function arrow() {
   var dom = svg('path');
+  var knownStrokes;
+  var pendingStroke;
+  var root;
   var defs;
 
   // svg element should have <defs> with all strokes defined in there.
-  var knownStrokes = root.arrowStroke;
-  if (!root.arrowStroke) {
-    knownStrokes = root.arrowStroke = {};
+
+  var api = {
+    attr: attr,
+    render: render,
+    appendTo: appendTo
+  };
+
+  return api;
+
+  function appendTo(svgDocument) {
+    root = svgDocument;
+    root.appendChild(dom);
+
+    knownStrokes = root.arrowStroke;
+    if (!root.arrowStroke) {
+      knownStrokes = root.arrowStroke = {};
+    }
+
+    if (pendingStroke) {
+      stroke(pendingStroke);
+      pendingStroke = null;
+    }
   }
 
-  // we are augmenting svg DOM element with our API. Is this really bad? ಠ_ಠ
-  dom.stroke = stroke;
-  dom.render = render;
+  function attr(name, value) {
+    // stroke requires special handling since we need to update defs as well
+    if (name === 'stroke') {
+      return stroke(value);
+    }
 
-  return dom;
+    dom.attr(name, value);
+    return api;
+  }
 
   function render(from, to) {
     dom.attr('d', 'M ' + from.x + ' ' + from.y + ' L ' + to.x + ' ' + to.y);
 
-    return dom;
+    return api;
   }
 
   function stroke(color) {
     if (typeof color !== 'string' && typeof color !== 'number') {
       throw new Error('Storke color is expected to be a string or a number');
+    }
+
+    if (!root) {
+      pendingStroke = color;
+      return api;
     }
 
     var strokeDef = knownStrokes[color];
@@ -50,7 +79,7 @@ function arrow(root) {
 
     dom.attr('marker-end', 'url(#' + strokeDef + ')').attr('stroke', color);
 
-    return dom;
+    return api;
   }
 
   function defineStroke(color) {

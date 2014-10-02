@@ -4,31 +4,63 @@ module.exports = arrow;
 
 arrow.intersectCircle = require('./lib/intersectCircle.js');
 
-function arrow(root) {
+function arrow() {
   var dom = svg('path');
+  var knownStrokes;
+  var pendingStroke;
+  var root;
   var defs;
 
   // svg element should have <defs> with all strokes defined in there.
-  var knownStrokes = root.arrowStroke;
-  if (!root.arrowStroke) {
-    knownStrokes = root.arrowStroke = {};
+
+  var api = {
+    attr: attr,
+    render: render,
+    appendTo: appendTo
+  };
+
+  return api;
+
+  function appendTo(svgDocument) {
+    root = svgDocument;
+    root.appendChild(dom);
+
+    knownStrokes = root.arrowStroke;
+    if (!root.arrowStroke) {
+      // todo: this is not good. We are agumenting svg dom element
+      knownStrokes = root.arrowStroke = {};
+    }
+
+    if (pendingStroke) {
+      stroke(pendingStroke);
+      pendingStroke = null;
+    }
   }
 
-  // we are augmenting svg DOM element with our API. Is this really bad? ಠ_ಠ
-  dom.stroke = stroke;
-  dom.render = render;
+  function attr(name, value) {
+    // stroke requires special handling since we need to update defs as well
+    if (name === 'stroke') {
+      return stroke(value);
+    }
 
-  return dom;
+    dom.attr(name, value);
+    return api;
+  }
 
   function render(from, to) {
     dom.attr('d', 'M ' + from.x + ' ' + from.y + ' L ' + to.x + ' ' + to.y);
 
-    return dom;
+    return api;
   }
 
   function stroke(color) {
     if (typeof color !== 'string' && typeof color !== 'number') {
       throw new Error('Storke color is expected to be a string or a number');
+    }
+
+    if (!root) {
+      pendingStroke = color;
+      return api;
     }
 
     var strokeDef = knownStrokes[color];
@@ -38,7 +70,7 @@ function arrow(root) {
 
     dom.attr('marker-end', 'url(#' + strokeDef + ')').attr('stroke', color);
 
-    return dom;
+    return api;
   }
 
   function defineStroke(color) {
